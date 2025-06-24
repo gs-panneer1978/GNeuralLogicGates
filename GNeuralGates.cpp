@@ -1,6 +1,3 @@
-
-//xcopy "$(SolutionDir)\$(Platform)\$(Configuration)\$(TargetName)$(TargetExt)" "C:\Schema\GNeuralLib\" /Y /I /D
-
 #pragma once
 #include <iostream>
 #include <vector>
@@ -44,10 +41,11 @@ typedef enum {
     HOLD = 0
 } ENUM_TRADE_ACTION;
 
-
-
-
-// Helper function (can remain outside the class as it's a general utility)
+/**
+ * @brief Prints the contents of a vector of doubles to the console.
+ * @param title A string title to print before the vector.
+ * @param vec The vector of doubles to be printed.
+ */
 void printVectorToConsole(const std::string& title, const VectorDouble& vec) {
     std::cout << title << " [ ";
     for (const auto& val : vec) {
@@ -57,7 +55,12 @@ void printVectorToConsole(const std::string& title, const VectorDouble& vec) {
 }
 
 
-// Helper function to get a random double in a specific range
+/**
+ * @brief Generates a random double within a specified range.
+ * @param min The minimum value of the range.
+ * @param max The maximum value of the range.
+ * @return A random double between min and max.
+ */
 double random_double(double min, double max) {
     static std::random_device rd;
     static std::mt19937 gen(rd());
@@ -65,81 +68,17 @@ double random_double(double min, double max) {
     return dis(gen);
 }
 
-// Helper function to interpret the output vector for printing
+/**
+ * @brief Interprets a 3-element output vector to a string decision.
+ * @param outputVec The output vector from the neural network, expected size 3.
+ * @return A string: "SELL", "HOLD", "BUY", or "INVALID".
+ */
 std::string getDecision(const VectorDouble& outputVec) {
     if (outputVec[0] == 1.0) return "SELL";
     if (outputVec[1] == 1.0) return "HOLD";
     if (outputVec[2] == 1.0) return "BUY";
-    return "INVALID";   
+    return "INVALID";
 }
-/*
-//  function to generate the dataset
-std::vector<TrainingData> generateTradingDataSet(int numberOfSamples) {
-    std::vector<TrainingData> trainingSet;
-
-    // --- Define Rules ---
-    const double PIP_VALUE = 0.0001;
-    const double HOLD_PIPS = 100.0;
-    const double HOLD_THRESHOLD = HOLD_PIPS * PIP_VALUE; // e.g., 0.01
-
-    for (int i = 0; i < numberOfSamples; ++i) {
-        double open, close, low, high, atr, cci, macd, psar;
-        VectorDouble outputVec(3, 0.0); // {SELL, HOLD, BUY}
-
-        // --- Generate Data Based on a Predetermined Outcome ---
-        // This ensures a good mix of all three classes.
-        int desiredOutcome = i % 3; // Cycle through BUY, SELL, HOLD
-
-        double basePrice = random_double(1.05, 1.15); // Simulate a common price range
-
-        switch (desiredOutcome) {
-        case 0: { // Generate a BUY signal
-            outputVec = { 0.0, 0.0, 1.0 };
-            open = basePrice;
-            // Ensure close > open and the difference is greater than the HOLD threshold
-            close = open + random_double(HOLD_THRESHOLD + 0.0001, HOLD_THRESHOLD + 0.005);
-            break;
-        }
-        case 1: { // Generate a SELL signal
-            outputVec = { 1.0, 0.0, 0.0 };
-            open = basePrice;
-            // Ensure close < open and the difference is greater than the HOLD threshold
-            close = open - random_double(HOLD_THRESHOLD + 0.0001, HOLD_THRESHOLD + 0.005);
-            break;
-        }
-        case 2: { // Generate a HOLD signal
-            outputVec = { 0.0, 1.0, 0.0 };
-            open = basePrice;
-            // Ensure the difference is within the HOLD threshold
-            close = open + random_double(-HOLD_THRESHOLD, HOLD_THRESHOLD);
-            break;
-        }
-        }
-
-        // Generate high/low that are consistent with open/close
-        high = std::max_element(open, close) + random_double(0.0001, 0.001);
-        low = std::max_element(open, close) - random_double(0.0001, 0.001);
-
-        // Generate plausible but random indicator values
-        atr = random_double(0.0005, 0.0030); // Average True Range
-        cci = random_double(-150.0, 150.0);   // Commodity Channel Index
-        macd = random_double(-0.001, 0.001);  // MACD value
-
-        // PSAR is a price level, so it should be near the price
-        if (close > open) { // Up-trend candle
-            psar = low - random_double(0.0001, 0.001); // PSAR is below price
-        }
-        else { // Down-trend candle
-            psar = high + random_double(0.0001, 0.001); // PSAR is above price
-        }
-
-        VectorDouble inputVec = { open, close, low, high, atr, cci, macd, psar };
-        trainingSet.push_back({ inputVec, outputVec });
-    }
-
-    return trainingSet;
-}
-*/
 
 // ===================================================================
 //  THE MAIN APPLICATION CLASS
@@ -147,7 +86,11 @@ std::vector<TrainingData> generateTradingDataSet(int numberOfSamples) {
 
 class NeuralNetworkTester {
 public:
-    // Constructor initializes the manager object
+    /**
+     * @brief Constructor for the NeuralNetworkTester class.
+     * Initializes a map that associates string commands with their corresponding training functions.
+     * This allows for easy extension and clean command dispatching.
+     */
     NeuralNetworkTester() {
         // This map connects a string command (like "xor") to the function that trains it.
         // This is much cleaner than a big if-else block.
@@ -160,6 +103,11 @@ public:
         m_trainingLaunchers["trade"] = [this]() { return this->runTradeTraining(); };
     }
 
+    /**
+     * @brief Runs the main application loop.
+     * Displays a menu, reads user commands, and dispatches them to the appropriate handler functions.
+     * The loop continues until the user enters 'q' or 'quit'.
+     */
     void run() {
         displayMenu();
         std::string line;
@@ -208,10 +156,13 @@ private:
     std::map<std::string, std::function<bool()>> m_trainingLaunchers;
 
 	ENUM_ACTIVATION m_activationFunction = ENUM_ACTIVATION::SIGMOID; // Default activation type
-    
-    //Helper function to check if a file exists.
-    // This uses the modern C++17 <filesystem> library.
 
+    /**
+     * @brief Checks if a file exists on the filesystem.
+     * Uses C++17 <filesystem> if available, otherwise falls back to a pre-C++17 method.
+     * @param filename The path to the file to check.
+     * @return True if the file exists, false otherwise.
+     */
     bool fileExists(const std::string& filename) {
 #if __cplusplus >= 201703L
         // C++17 or newer
@@ -223,6 +174,9 @@ private:
 #endif
     }
 
+    /**
+     * @brief Displays the main menu of available commands to the user.
+     */
     void displayMenu() {
         std::cout << "========================================" << std::endl;
         std::cout << "  GNeuralLib (Logic Gates) Test Runner " << std::endl;
@@ -235,12 +189,15 @@ private:
         std::cout << "  - NOR       (Train the NOR gate) : LR(Eta): CPU=0.1 GPU=0.001, mom: 0.1" << std::endl; // NEW
         std::cout << "  - XNOR      (Train the XNOR gate) : LR(Eta): CPU=0.1 GPU=0.001, mom: 0.1" << std::endl; // NEW
         std::cout << "  - TRADE     (Train the Trading Network : LR(Eta): CPU=0.1 GPU=0.001, mom: 0.1)" << std::endl; // NEW
-        //std::cout << "  - i         (Run interactive test with a saved file)" << std::endl;
         std::cout << "  - i <gate>            (e.g., 'i xor' to test the XOR gate)" << std::endl;
         std::cout << "  - q / quit  (Exit the program)" << std::endl;
     }
 
-    // NEW: Logic to handle the interactive test request, including the train-on-demand feature.
+    /**
+     * @brief Handles a request to run an interactive test for a specific gate.
+     * It checks if a trained network file exists. If not, it prompts the user to train one on the fly.
+     * @param gateName The name of the gate to test (e.g., "xor", "and").
+     */
     void handleInteractiveTestRequest(std::string gateName) {
         if (gateName.empty()) {
             std::cout << "Please specify which gate to test (e.g., 'i xor'): ";
@@ -262,14 +219,14 @@ private:
 
         if (fileExists(filename)) {
             // If the file exists, run the test directly.
-			cout << "Starting Interactive Test using CPU Neural schema file '" << filename << "' found." << std::endl;
+			std::cout << "Starting Interactive Test using CPU Neural schema file '" << filename << "' found." << std::endl;
             std::cout << "Loading trained network from '" << filename << "'..." << std::endl;
-            
+
             runInteractiveTest(filename);
         } else if(fileExists("OCL_" + filename)) {
             // If the OpenCL version exists, run the test directly.
             std::cout << "Starting Interactive Test using OpenCL (GPU) Neural schema file 'OCL_" << filename << "' found." << std::endl;
-            
+
             runInteractiveTest("OCL_" + filename);
 		}
         else {
@@ -287,7 +244,7 @@ private:
                 // If training succeeded, proceed to the interactive test.
                 if (trainingWasSuccessful) {
                     std::cout << "\nTraining complete. Proceeding to interactive test..." << std::endl;
-                    
+
                     runInteractiveTest(filename);
                 }
                 else {
@@ -304,8 +261,15 @@ private:
     // NEW: Generic Gate Training Engine
     // This single function replaces all the duplicated logic.
     // ===================================================================
-   
-    // MODIFIED: All training functions now return bool to indicate success.
+
+    /**
+     * @brief A generic engine for training a neural network for a logic gate.
+     * This function handles topology creation, network training, and saving the result.
+     * @param gateName The name of the gate (e.g., "XOR"), used for titling and filenames.
+     * @param trainingSet The vector of training data (inputs and target outputs).
+     * @param activationFunction The activation function to use for the network's neurons.
+     * @return True if training was successful, false otherwise.
+     */
     bool runGateTraining(const std::string& gateName, const std::vector<TrainingData>& trainingSet, ENUM_ACTIVATION activationFunction = SIGMOID) {
         std::cout << "\n--- GNeural Library: " << gateName << " Gate Training Test ---" << std::endl;
 
@@ -322,9 +286,7 @@ private:
             return false;
         }
 
-
-        
-        m_net->SetActivationType(activationFunction); //m_activationFunction); // Set the activation function to TanH
+        m_net->SetActivationType(activationFunction);
         // Train the network with the provided data
         bool trainingComplete = trainNetwork(trainingSet);
 
@@ -346,6 +308,10 @@ private:
     // These are now very simple. They just define the data and call the engine.
     // ===================================================================
 
+    /**
+     * @brief Prepares the training data for the XOR gate and initiates training.
+     * @return The result of the training process (true for success, false for failure).
+     */
     bool runXorTraining() {
         const std::vector<TrainingData> trainingSet = {
             {{0.0, 0.0}, {0.0}},
@@ -353,9 +319,13 @@ private:
             {{1.0, 0.0}, {1.0}},
             {{1.0, 1.0}, {0.0}}
         };
-        return runGateTraining("XOR", trainingSet); // Return the result //runGateTraining("XOR", trainingSet);
+        return runGateTraining("XOR", trainingSet);
     }
 
+    /**
+     * @brief Prepares the training data for the AND gate and initiates training.
+     * @return The result of the training process (true for success, false for failure).
+     */
     bool runAndTraining() {
         const std::vector<TrainingData> trainingSet = {
             {{0.0, 0.0}, {0.0}},
@@ -366,6 +336,10 @@ private:
         return runGateTraining("AND", trainingSet);
     }
 
+    /**
+     * @brief Prepares the training data for the OR gate and initiates training.
+     * @return The result of the training process (true for success, false for failure).
+     */
     bool runOrTraining() {
         const std::vector<TrainingData> trainingSet = {
             {{0.0, 0.0}, {0.0}},
@@ -376,6 +350,10 @@ private:
         return runGateTraining("OR", trainingSet);
     }
 
+    /**
+     * @brief Prepares the training data for the NAND gate and initiates training.
+     * @return The result of the training process (true for success, false for failure).
+     */
     bool runNandTraining() {
         const std::vector<TrainingData> trainingSet = {
             {{0.0, 0.0}, {1.0}},
@@ -386,8 +364,11 @@ private:
         return runGateTraining("NAND", trainingSet);
     }
 
-    // --- Some Bonus Gates ---
 
+    /**
+     * @brief Prepares the training data for the NOR gate and initiates training.
+     * @return The result of the training process (true for success, false for failure).
+     */
     bool runNorTraining() {
         const std::vector<TrainingData> trainingSet = {
             {{0.0, 0.0}, {1.0}},
@@ -398,6 +379,10 @@ private:
         return runGateTraining("NOR", trainingSet);
     }
 
+    /**
+     * @brief Prepares the training data for the XNOR gate and initiates training.
+     * @return The result of the training process (true for success, false for failure).
+     */
     bool runXnorTraining() {
         const std::vector<TrainingData> trainingSet = {
             {{0.0, 0.0}, {1.0}},
@@ -408,21 +393,23 @@ private:
         return runGateTraining("XNOR", trainingSet);
     }
 
-	// --- Trade Training Example ---
-	// This is a simple example of a trade decision-making network.
-	// Using TanH activation function, it outputs: either Buy (1), Sell (-1), or Hold or Undefined (0).
-	// Inputs are: Buy signal, Sell signal, and Hold signal. (0 or 1)
+	/**
+     * @brief Prepares a sample training dataset for a trading decision model and initiates training.
+     * This model uses one-hot encoding for the output: {SELL, HOLD, BUY}.
+     * It uses the SIGMOID activation function.
+     * @return The result of the training process (true for success, false for failure).
+     */
     bool runTradeTraining() {
-        // for complex decision making of for a more robust and standard approach for 3 or more distinct classes 
+        // for complex decision making of for a more robust and standard approach for 3 or more distinct classes
         // is to use one-hot encoding for the output.
         // 3 input neurons, a large hidden layer and 3 output neurons
         // Activation: For this setup, you can go back to using the Sigmoid function on all output neurons.
-        // When you feed forward an input, the network's output might look like {0.85, 0.12, 0.05}, 
+        // When you feed forward an input, the network's output might look like {0.85, 0.12, 0.05},
         // and you would interpret this as a "Sell" decision because the first neuron has the highest value.
         m_activationFunction = ENUM_ACTIVATION::SIGMOID; // Set the activation function to SIGMOID
-		
+
         const std::vector<TrainingData> trainingSet = {
-            // Each entry: 
+            // Each entry:
             // {{open,  close,  low,   high,   atr,    cci,     macd,   psar}, {SELL, HOLD, BUY}}
 
             // --- BUY SIGNALS ---
@@ -455,39 +442,30 @@ private:
             {{1.1330, 1.1332, 1.1310, 1.1350, 0.0042,   25.1,  0.0005, 1.1305}, {0.0, 1.0, 0.0}},
             {{1.0980, 1.0978, 1.0960, 1.0995, 0.0039,  -12.3, -0.0001, 1.0955}, {0.0, 1.0, 0.0}},
         };
-        // We are using the Sigmoid function on all output neurons instead of TanH. 
-        // When you feed forward an input, the network's output might look like {0.85, 0.12, 0.05}, 
+        // We are using the Sigmoid function on all output neurons instead of TanH.
+        // When you feed forward an input, the network's output might look like {0.85, 0.12, 0.05},
         // and you would interpret this as a "Sell" decision because the first neuron has the highest value.
 		// if necessary, add a - sign to the first neuron output to indicate SELL.
-        return runGateTraining("Trade", trainingSet, SIGMOID); 
+        return runGateTraining("Trade", trainingSet, SIGMOID);
 	}
 
-    /*
-        make the function completely data - driven, relying only on the topology read from the file.
-        Load the network and get its topology.
-        Determine the required number of inputs from topology.front().
-        Dynamically read exactly that many inputs from the user.
-        Feed them forward.
-        Determine the number of outputs from topology.back().
-        Interpret the results based on the number of outputs.
-        */
-    // The decision to train is handled by `handleInteractiveTestRequest`.
+
+    /**
+     * @brief Runs an interactive testing session for a pre-trained network.
+     * This function is data-driven. It loads a network from a file, determines the required number
+     * of inputs and outputs from the loaded topology, and then enters a loop to accept user inputs,
+     * perform inference, and display the results in an interpreted format.
+     * @param network_file The path to the saved neural network file (.nnw).
+     */
     void runInteractiveTest( const std::string& network_file) {
         std::cout << "\n--- Interactive Inference Test ---" << std::endl;
 
         // 1. Create a network object and load the state from the file.
-        // The loadNetwork function should handle building the correct topology.
-        //std::unique_ptr<InterfaceGNeuralNet> loadedNet = NetworkFactory::CreateNetwork(); // Create a blank network
-        //std::unique_ptr<InterfaceGNeuralNet> loadedNet = NetworkFactory::CreateNetworkAuto({ 2, 3, 1 }, network_file);
         std::cout << "Loading trained network from '" << network_file << "'..." << std::endl;
         std::unique_ptr<InterfaceGNeuralNet> loadedNet = NetworkFactory::LoadNetworkFromFile(network_file);
 
         if (!loadedNet) {
             std::cerr << "Failed to load the network. Aborting test." << std::endl;
-            return;
-        }
-        if (!loadedNet) {
-            std::cerr << "Failed to load network from '" << network_file << "'. Aborting test." << std::endl;
             return;
         }
 
@@ -564,8 +542,8 @@ private:
 
 
                 std::cout << "  Interpreted Result: ";
-                cout << "Class " << winning_index << " with value: " << std::fixed << std::setprecision(4) << *max_it << " which signifies : ";
-                
+                std::cout << "Class " << winning_index << " with value: " << std::fixed << std::setprecision(4) << *max_it << " which signifies : ";
+
 
 				final_result = 0.0; // Reset final result for each iteration
 
@@ -591,110 +569,14 @@ private:
 
         std::cout << "\nExiting interactive test." << std::endl;
     }
-/*
-    void runInteractiveTest(const std::string& network_file) {
 
-        std::cout << "\n--- Interactive Inference Test ---" << std::endl;
-        std::cout << "Loading trained network from '" << network_file << "'..." << std::endl;
-
-        // Placeholder with a bare-minimum network frame, as loading should define the real one
-        //Topology placeholder_topology = { 2, 3, 1 }; 
-        // This test is self-contained and creates its own network instance
-        std::unique_ptr<InterfaceGNeuralNet> loadedNet = NetworkFactory::CreateNetworkAuto({ 2, 3, 1 }, network_file);
-        if (!loadedNet) {
-            std::cerr << "Failed to load the network. Aborting test." << std::endl;
-            return;
-        }
-        // retrieve the topology after loading network from file (if exists)
-        Topology topology = loadedNet->getTopology();
-
-        std::cout << "Network loaded using " << network_file << " successfully. Topology Size: " << topology.size() << ". Ready for input." << std::endl;
-        std::cout << "Type 'q' to quit." << std::endl;
-
-        std::string line;
-
-
-        int numInputs = 0, numOutputs = 0;
-        cout << "Inputs: " << topology.at(0) << ", Outputs: " << topology.back() << std::endl;
-
-        while (true) {
-            double input1 = 0.0, input2 = 0.0, input3 = 0.0, raw_output;
-            VectorDouble inputs = { input1, input2, input3 }, results;
-
-            std::cout << "\nGate Inputs (Required: " << topology.at(0) << "):  (eg: 0 1 or 0 1 1 ..) > ";
-            std::cout << "Enter two or more numbers (either 0 or 1), separated by a space (e.g., '1 0' or '1 0 0' etc)." << std::endl;
-            if (!std::getline(std::cin, line) || line == "q" || line == "Q") break;
-            std::stringstream ss(line);
-
-            double final_result = 0;
-
-            if (numInputs == 2) {
-
-                if (!(ss >> input1 >> input2)) {
-                    std::cout << "Invalid input. Requires at least 2 inputs." << std::endl;
-                    continue;
-                }
-                cout << "Feed Forwarding with inputs: " << input1 << ", " << input2 << std::endl;
-                loadedNet->feedForward({ input1, input2 });
-
-            }
-            else if (numInputs == 3) {
-
-                if (!(ss >> input1 >> input2 >> input3)) {
-                    std::cout << "Invalid inputs. Received: {" << input1 << "," << input2 << "," << input3 << "}. Requires at least 3 inputs." << std::endl;
-                    continue;
-                }
-                cout << "Feed Forwarding with inputs: " << input1 << ", " << input2 << ", " << input3 << std::endl;
-                loadedNet->feedForward({ input1, input2, input3 });
-
-
-            }
-            else {
-                cout << "Feed Forwarding failed with inputs: " << input1 << ", " << input2 << ", " << input3 << std::endl;
-                std::cout << "Invalid number of expected inputs. Exiting." << std::endl;
-                return;
-            }
-
-            // retrieve the results
-            cout << "Retrieving results from the network..." << std::endl;
-            loadedNet->getResults(results);
-            // process the results
-            if (numOutputs == 1) {
-                raw_output = results[0]; //  first result is the output
-                std::cout << "  Raw Output: " << std::fixed << std::setprecision(4) << raw_output << std::endl;
-                std::cout << "  Result: [" << (int)input1 << "-> " << getGateName(network_file) << " <-" << (int)input2 << "] => " << final_result << std::endl;
-                // Convert the raw output to a binary result, double to result conversion needed
-                // if using TanH, modify it accordingly
-                final_result = (raw_output > 0.5) ? 1.0 : 0.0;
-            }
-            else if (numOutputs > 1) {
-                auto  maxValue = std::max_element(results.begin(), results.end());
-                switch (std::distance(results.begin(), maxValue))
-                {
-                case 0:
-                    final_result = -results.at(0); //SELL (for trade example)
-                    break;
-                case 2:
-                    final_result = results.at(2); //BUY (for trade example)
-                    break;
-                default:
-                    final_result = results.at(1); //HOLD (for trade example)
-                    break;
-                }
-                for (const auto& result : results) {
-                    std::cout << "  Raw Output: " << std::fixed << std::setprecision(4) << result << std::endl;
-
-                }
-                cout << " Final Result: [" << EnumToString(rawToSignal(final_result)) << "] => " << final_result << std::endl;
-            }
-
-        }
-
-        std::cout << "Exiting interactive test. Ready for new command." << std::endl;
-    }
-*/
+    /**
+     * @brief Converts a raw numerical output from the trading model to a trade action.
+     * @param raw_output The raw output value from a neuron, passed by reference.
+     * @return An ENUM_TRADE_ACTION (BUY, SELL, or HOLD).
+     */
     ENUM_TRADE_ACTION rawToSignal(double &raw_output) {
-		cout << "  Raw Output: " << std::fixed << std::setprecision(4) << raw_output << std::endl;
+		std::cout << "  Raw Output: " << std::fixed << std::setprecision(4) << raw_output << std::endl;
         if (raw_output > 0.1) {
             return BUY; // Buy signal
         }
@@ -706,6 +588,11 @@ private:
         }
 	}
 
+    /**
+     * @brief Converts an ENUM_TRADE_ACTION to its string representation.
+     * @param tradeAction The enum value to convert.
+     * @return A string ("BUY", "SELL", or "HOLD").
+     */
     std::string EnumToString(ENUM_TRADE_ACTION tradeAction) {
         switch (tradeAction) {
         case 1: return "BUY";
@@ -714,6 +601,13 @@ private:
         }
     }
 
+    /**
+     * @brief Manages the core training loop for the neural network.
+     * It iterates through the training data, performing feed-forward and back-propagation passes
+     * until the network's error is low enough for a set number of consecutive epochs or the max number of passes is reached.
+     * @param trainingSet The dataset to train on.
+     * @return True if the network trained successfully (converged), false otherwise.
+     */
     bool trainNetwork(const std::vector<TrainingData>& trainingSet) {
         // Training parameters
         const double marginOfError = 0.1;
@@ -760,6 +654,11 @@ private:
         return false;
     }
 
+    /**
+     * @brief Prompts the user to define the network topology.
+     * Asks for the number of input neurons, hidden layers, neurons per hidden layer, and output neurons.
+     * @return A Topology (vector of size_t) representing the network structure.
+     */
     Topology getTopologyFromUser() {
         Topology topology;
         std::string line;
@@ -790,6 +689,12 @@ private:
         return topology;
     }
 
+    /**
+     * @brief Saves the trained network to a file and performs a final verification pass.
+     * It prints the network's output for each entry in the training set to show how well it learned.
+     * @param title The base name for the output file (e.g., "XOR_Gate").
+     * @param trainingSet The original training data used for verification.
+     */
     void verifyAndSaveNetwork(const std::string& title, const std::vector<TrainingData>& trainingSet) {
         std::string filename = title + ".nnw";
         std::cout << "Saving trained network to '" << filename << "'..." << std::endl;
@@ -823,9 +728,12 @@ private:
         }
     }
 
-
-
-    // A robust function to extract the gate name.
+    /**
+     * @brief Extracts a base name from a full filename string.
+     * For example, it extracts "XOR" from "XOR_Gate.nnw".
+     * @param full_name The full filename string.
+     * @return The extracted base name.
+     */
     std::string getGateName(const std::string& full_name) {
         if (full_name.empty()) {
             return " "; // Return empty string if input is empty.
@@ -851,15 +759,14 @@ private:
         return full_name;
     }
 
-    
 
-    
 };
 
-
-
-
-
+/**
+ * @brief The main entry point of the program.
+ * Creates an instance of the NeuralNetworkTester application and runs it.
+ * @return 0 on successful execution.
+ */
 int main() {
     // Create an instance of our application class
     NeuralNetworkTester app;
